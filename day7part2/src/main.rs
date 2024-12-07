@@ -10,7 +10,12 @@ fn is_possibly_true(target: u64, current_result: u64, numbers: &[u64]) -> bool {
     } else if current_result > target || numbers.is_empty() {
         return false;
     }
-    is_possibly_true(target, current_result * numbers[0], &numbers[1..])
+    // part2
+    let mut new_number = current_result.to_string();
+    new_number.push_str(&numbers[0].to_string());
+    let num: u64 = new_number.parse().unwrap();
+    is_possibly_true(target, num, &numbers[1..])
+        || is_possibly_true(target, current_result * numbers[0], &numbers[1..])
         || is_possibly_true(target, current_result + numbers[0], &numbers[1..])
 }
 
