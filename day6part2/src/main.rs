@@ -68,16 +68,17 @@ fn check_if_putting_obstacle_in_front_creates_loop(
     if let Some(next) = step(&map, current_pos) {
         if next.1 == current_pos.1 {
             let obstacle_position = next.0;
+            let mut map_copy = map.clone();
+            map_copy[next.0 .0 as usize][next.0 .1 as usize] = OBSTACLE;
             if !guard_path_pos.contains(&next.0) {
                 // turn right
                 let mut loop_test_pos = (current_pos.0, current_pos.1.turn_right());
-                guard_path_extended.insert(loop_test_pos);
-                while let Some(pos) = step(&map, &loop_test_pos) {
+                while let Some(pos) = step(&map_copy, &loop_test_pos) {
+                    guard_path_extended.insert(loop_test_pos);
                     if guard_path_extended.contains(&pos) {
                         obstacle_positions.insert(obstacle_position);
                         return;
                     }
-                    guard_path_extended.insert(pos);
                     loop_test_pos = pos;
                 }
             }
