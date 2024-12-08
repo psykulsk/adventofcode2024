@@ -2,19 +2,10 @@ use std::{
     char,
     collections::{HashMap, HashSet},
     fs,
-    mem::ManuallyDrop,
 };
 
 //const INPUT_FILE: &str = "./testinput.txt";
 const INPUT_FILE: &str = "./input.txt";
-
-fn print_matrix(matrix: &Vec<Vec<char>>) {
-    println!("--------------");
-    for line in matrix {
-        let joined = String::from_iter(line);
-        println!("{joined}");
-    }
-}
 
 fn bounds_check((y, x): (i32, i32), max_y: i32, max_x: i32) -> bool {
     y >= 0 && y < max_y && x >= 0 && x < max_x
