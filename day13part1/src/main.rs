@@ -1,4 +1,7 @@
-use std::{cmp::min, fs, i64};
+use std::{
+    cmp::{max, min},
+    fs, i64,
+};
 
 //const INPUT_FILE: &str = "./testinput.txt";
 const INPUT_FILE: &str = "./input.txt";
@@ -33,23 +36,23 @@ fn main() {
         let prize_y: i64 = cap_prize.get(2).unwrap().as_str().parse().unwrap();
         let prize_y = prize_y + 10000000000000;
 
-        let mut lowest_price: Option<i64> = None;
-        let mut a_presses = 0;
-        loop {
-            let x_left = prize_x - a_presses * a_x;
-            let y_left = prize_y - a_presses * a_y;
-            let b_x_mod = x_left % b_x;
-            let b_y_mod = y_left % b_y;
-            if b_y_mod == 0 && b_x_mod == 0 {
-                let b_presses = x_left / b_x;
-                let price = a_presses * A_PRICE + b_presses * B_PRICE;
-                lowest_price = Some(min(price, lowest_price.unwrap_or(i64::MAX)))
-            } else if x_left < 0 || y_left < 0 {
-                break;
-            }
-            a_presses += 1;
+        let a_top = prize_x * b_y - prize_y * b_x;
+        let a_bot = a_x * b_y - a_y * b_x;
+        let a = a_top / a_bot;
+
+        if a_top % a_bot != 0 || a < 0 {
+            continue;
         }
-        total_price += lowest_price.unwrap_or(0);
+
+        let b_top = prize_y - a * a_y;
+        let b_bot = b_y;
+        let b = b_top / b_bot;
+        if b_top % b_bot != 0 || b < 0 {
+            continue;
+        }
+        let price = A_PRICE * a + B_PRICE * b;
+        println!("a={a}, b={b}, price = {price}");
+        total_price += price;
     }
     println!("{total_price}");
 }
