@@ -1,15 +1,13 @@
 use std::{
     cmp::min,
-    collections::HashSet,
+    collections::{BinaryHeap, HashMap, HashSet},
     fs,
-    io::{stdin, stdout, Read, Write},
-    isize,
-    thread::sleep_ms,
 };
 
 //const INPUT_FILE: &str = "./testinput.txt";
 const INPUT_FILE: &str = "./input.txt";
 
+#[derive(Debug, Hash, PartialEq, PartialOrd, Eq, Clone, Copy)]
 enum Dir {
     N,
     E,
@@ -29,7 +27,7 @@ impl Dir {
         }
     }
 
-    fn rot(&self) -> isize {
+    fn rot(&self) -> usize {
         match self {
             Self::N => 0,
             Self::S => 180,
@@ -38,21 +36,13 @@ impl Dir {
         }
     }
 
-    fn rot_cost(&self, target: &Dir) -> isize {
-        min::<isize>(
-            self.rot().abs_diff(target.rot()) as isize,
-            ((360 as isize).abs_diff(self.rot()) as isize) + target.rot(),
+    fn rot_cost(&self, target: &Dir) -> usize {
+        min::<usize>(
+            self.rot().abs_diff(target.rot()),
+            (360 as usize).abs_diff(self.rot()) + target.rot(),
         ) / 90
             * 1000
     }
-}
-
-fn pause() {
-    // let mut stdout = stdout();
-    // stdout.write(b"Press Enter to continue...").unwrap();
-    // stdout.flush().unwrap();
-    // stdin().read(&mut [0]).unwrap();
-    sleep_ms(50);
 }
 
 fn print_map(map: &Vec<Vec<char>>) {
@@ -71,48 +61,62 @@ fn print_map_with_path(map: &Vec<Vec<char>>, visited: &HashSet<(usize, usize)>) 
         map_clone[point.0][point.1] = 'X';
     }
     print_map(&map_clone);
-    pause();
 }
 
-fn dfs_shortest_path(
-    start: &(usize, usize),
-    start_dir: &Dir,
-    mut visited: HashSet<(usize, usize)>,
-    end: &(usize, usize),
-    map: &Vec<Vec<char>>,
-    current_cost: usize,
-) -> Option<usize> {
-    //print_map_with_path(map, &visited);
-    if start == end {
-        return Some(current_cost);
+#[derive(Debug, Eq, PartialEq, PartialOrd)]
+struct VertexWithMinDistance {
+    pub dist: usize,
+    pub pos: (usize, usize),
+    pub dir: Dir,
+}
+
+impl Ord for VertexWithMinDistance {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other.dist.cmp(&self.dist)
     }
-    if visited.contains(start) {
-        return None;
-    }
-    visited.insert(*start);
-    let mut min_cost = None;
-    for dir in DIRECTIONS {
-        let neigh = dir.next(start);
-        if map[neigh.0][neigh.1] == '#' {
-            continue;
-        }
-        if let Some(cost) = dfs_shortest_path(
-            &neigh,
-            &dir,
-            visited.clone(),
-            end,
-            map,
-            current_cost + (start_dir.rot_cost(&dir) as usize) + 1,
-        ) {
-            if let Some(current_min_cost) = min_cost {
-                min_cost = Some(min(current_min_cost, cost));
-            } else {
-                min_cost = Some(cost);
+}
+
+fn djikstra(map: &Vec<Vec<char>>, start: &(usize, usize), target: &(usize, usize)) -> usize {
+    let mut vertices: BinaryHeap<VertexWithMinDistance> = BinaryHeap::new();
+    vertices.push(VertexWithMinDistance {
+        pos: start.clone(),
+        dist: 0,
+        dir: Dir::E,
+    });
+
+    let mut distances: HashMap<((usize, usize), Dir), usize> =
+        HashMap::from([((start.clone(), Dir::E), 0)]);
+
+    while let Some(vertex) = vertices.pop() {
+        for dir in DIRECTIONS {
+            let next = dir.next(&vertex.pos);
+            let next_dist =
+                distances.get(&((vertex.pos), vertex.dir)).unwrap() + vertex.dir.rot_cost(&dir) + 1;
+            if next_dist < vertex.dist {
+                continue;
+            }
+            let next_field_value = map[next.0][next.1];
+            if next_field_value == '#' {
+                continue;
+            }
+            if next_dist < *distances.get(&((next), dir)).unwrap_or(&usize::MAX) {
+                distances.insert(((next), dir), next_dist);
+                vertices.push(VertexWithMinDistance {
+                    dist: next_dist,
+                    pos: next,
+                    dir,
+                });
             }
         }
     }
-
-    min_cost
+    let mut min_target_dist: usize = usize::MAX;
+    for dir in DIRECTIONS {
+        min_target_dist = *min(
+            distances.get(&(*target, dir)).unwrap_or(&usize::MAX),
+            &min_target_dist,
+        );
+    }
+    min_target_dist
 }
 
 fn main() {
@@ -139,9 +143,7 @@ fn main() {
         }
     }
 
-    print_map(&map);
     println!("start: {start:?}, end: {end:?}");
-    let visited: HashSet<(usize, usize)> = HashSet::new();
-    let result = dfs_shortest_path(&start.unwrap(), &Dir::E, visited, &end.unwrap(), &map, 0);
+    let result = djikstra(&map, &start.unwrap(), &end.unwrap());
     println!("result: {result:?}");
 }
