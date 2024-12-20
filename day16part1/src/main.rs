@@ -1,13 +1,13 @@
 use std::{
     cmp::min,
-    collections::{BinaryHeap, HashMap, HashSet},
+    collections::{BTreeSet, HashMap},
     fs,
 };
 
-const INPUT_FILE: &str = "./testinput.txt";
-//const INPUT_FILE: &str = "./input.txt";
+//const INPUT_FILE: &str = "./testinput.txt";
+const INPUT_FILE: &str = "./input.txt";
 
-#[derive(Debug, Hash, PartialEq, PartialOrd, Eq, Clone, Copy)]
+#[derive(Debug, Hash, PartialEq, PartialOrd, Ord, Eq, Clone, Copy)]
 enum Dir {
     N,
     E,
@@ -27,92 +27,53 @@ impl Dir {
         }
     }
 
-    fn rot(&self) -> usize {
+    fn get_left_and_right(&self) -> [Dir; 2] {
         match self {
-            Self::N => 0,
-            Self::S => 180,
-            Self::E => 90,
-            Self::W => 270,
+            Self::N => [Dir::W, Dir::E],
+            Self::S => [Dir::E, Dir::W],
+            Self::W => [Dir::S, Dir::N],
+            Self::E => [Dir::N, Dir::S],
         }
-    }
-
-    fn rot_cost(&self, target: &Dir) -> usize {
-        min::<usize>(
-            self.rot().abs_diff(target.rot()),
-            (360 as usize).abs_diff(self.rot()) + target.rot(),
-        ) / 90
-            * 1000
-    }
-}
-
-fn print_map(map: &Vec<Vec<char>>) {
-    for row in map {
-        for c in row {
-            print!("{c}");
-        }
-        print!("\n");
-    }
-    print!("\n");
-}
-
-fn print_map_with_path(map: &Vec<Vec<char>>, visited: &HashSet<(usize, usize)>) {
-    let mut map_clone = map.clone();
-    for point in visited {
-        map_clone[point.0][point.1] = 'X';
-    }
-    print_map(&map_clone);
-}
-
-#[derive(Debug, Eq, PartialEq, PartialOrd)]
-struct VertexWithMinDistance {
-    pub dist: usize,
-    pub pos: (usize, usize),
-    pub dir: Dir,
-}
-
-impl Ord for VertexWithMinDistance {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        other.dist.cmp(&self.dist)
     }
 }
 
 fn djikstra(map: &Vec<Vec<char>>, start: &(usize, usize), target: &(usize, usize)) -> usize {
-    let mut vertices: BinaryHeap<VertexWithMinDistance> = BinaryHeap::new();
-    vertices.push(VertexWithMinDistance {
-        pos: start.clone(),
-        dist: 0,
-        dir: Dir::E,
-    });
+    let mut vertices: BTreeSet<(usize, (usize, usize), Dir)> = BTreeSet::new();
+    vertices.insert((0, *start, Dir::E));
 
     let mut distances: HashMap<((usize, usize), Dir), usize> =
-        HashMap::from([((start.clone(), Dir::E), 0)]);
+        HashMap::from([((*start, Dir::E), 0)]);
 
-    while let Some(vertex) = vertices.pop() {
-        let vertex_min_dist = distances.get(&((vertex.pos), vertex.dir)).unwrap().clone();
-        for next_dir in DIRECTIONS {
-            let next;
-            let next_dist;
-            if next_dir == vertex.dir {
-                // move forward
-                next = next_dir.next(&vertex.pos);
-                next_dist = vertex_min_dist + 1;
-            } else {
-                // rotate
-                next = vertex.pos.clone();
-                next_dist = vertex_min_dist + vertex.dir.rot_cost(&next_dir);
+    while let Some(vertex) = vertices.pop_first() {
+        let current_vertex_position = vertex.1;
+        let current_vertex_direction = vertex.2;
+        let current_vertex_min_cost = distances
+            .get(&(current_vertex_position, current_vertex_direction))
+            .unwrap()
+            .clone();
+        let mut possible_dirs = current_vertex_direction.get_left_and_right().to_vec();
+        possible_dirs.push(current_vertex_direction);
+
+        for next_move_dir in possible_dirs {
+            let mut cost = 1;
+            if next_move_dir != current_vertex_direction {
+                cost += 1000;
             }
-            let next_field_value = map[next.0][next.1];
-            if next_field_value == '#' {
+            let next_position = next_move_dir.next(&current_vertex_position);
+            if map[next_position.0][next_position.1] == '#' {
                 continue;
             }
-
-            if next_dist < *distances.get(&((next), next_dir)).unwrap_or(&usize::MAX) {
-                distances.insert(((next), next_dir), next_dist);
-                vertices.push(VertexWithMinDistance {
-                    dist: next_dist,
-                    pos: next,
-                    dir: next_dir,
-                });
+            let current_next_position_cost = distances
+                .get(&(next_position, next_move_dir))
+                .unwrap_or(&usize::MAX)
+                .clone();
+            if current_vertex_min_cost + cost < current_next_position_cost {
+                distances.insert(
+                    ((next_position), next_move_dir),
+                    current_vertex_min_cost + cost,
+                );
+                vertices.remove(&(current_next_position_cost, next_position, next_move_dir));
+                vertices.insert((current_vertex_min_cost + cost, next_position, next_move_dir));
             }
         }
     }
