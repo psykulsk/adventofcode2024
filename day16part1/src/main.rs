@@ -88,13 +88,13 @@ fn djikstra(map: &Vec<Vec<char>>, start: &(usize, usize), target: &(usize, usize
         HashMap::from([((start.clone(), Dir::E), 0)]);
 
     while let Some(vertex) = vertices.pop() {
+        let vertex_min_dist = distances.get(&((vertex.pos), vertex.dir)).unwrap().clone();
+        if vertex_min_dist < vertex.dist {
+            continue;
+        }
         for dir in DIRECTIONS {
             let next = dir.next(&vertex.pos);
-            let next_dist =
-                distances.get(&((vertex.pos), vertex.dir)).unwrap() + vertex.dir.rot_cost(&dir) + 1;
-            if next_dist < vertex.dist {
-                continue;
-            }
+            let next_dist = vertex_min_dist + vertex.dir.rot_cost(&dir) + 1;
             let next_field_value = map[next.0][next.1];
             if next_field_value == '#' {
                 continue;
