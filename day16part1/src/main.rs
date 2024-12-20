@@ -4,8 +4,8 @@ use std::{
     fs,
 };
 
-//const INPUT_FILE: &str = "./testinput.txt";
-const INPUT_FILE: &str = "./input.txt";
+const INPUT_FILE: &str = "./testinput.txt";
+//const INPUT_FILE: &str = "./input.txt";
 
 #[derive(Debug, Hash, PartialEq, PartialOrd, Eq, Clone, Copy)]
 enum Dir {
@@ -89,22 +89,29 @@ fn djikstra(map: &Vec<Vec<char>>, start: &(usize, usize), target: &(usize, usize
 
     while let Some(vertex) = vertices.pop() {
         let vertex_min_dist = distances.get(&((vertex.pos), vertex.dir)).unwrap().clone();
-        if vertex_min_dist < vertex.dist {
-            continue;
-        }
-        for dir in DIRECTIONS {
-            let next = dir.next(&vertex.pos);
-            let next_dist = vertex_min_dist + vertex.dir.rot_cost(&dir) + 1;
+        for next_dir in DIRECTIONS {
+            let next;
+            let next_dist;
+            if next_dir == vertex.dir {
+                // move forward
+                next = next_dir.next(&vertex.pos);
+                next_dist = vertex_min_dist + 1;
+            } else {
+                // rotate
+                next = vertex.pos.clone();
+                next_dist = vertex_min_dist + vertex.dir.rot_cost(&next_dir);
+            }
             let next_field_value = map[next.0][next.1];
             if next_field_value == '#' {
                 continue;
             }
-            if next_dist < *distances.get(&((next), dir)).unwrap_or(&usize::MAX) {
-                distances.insert(((next), dir), next_dist);
+
+            if next_dist < *distances.get(&((next), next_dir)).unwrap_or(&usize::MAX) {
+                distances.insert(((next), next_dir), next_dist);
                 vertices.push(VertexWithMinDistance {
                     dist: next_dist,
                     pos: next,
-                    dir,
+                    dir: next_dir,
                 });
             }
         }
